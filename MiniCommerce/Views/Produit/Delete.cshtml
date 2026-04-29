@@ -1,0 +1,30 @@
+@model MiniCommerce.Models.Produit
+
+@{
+    ViewData["Title"] = "Supprimer le Produit";
+}
+
+<h2><i class="bi bi-trash"></i> Supprimer le Produit</h2>
+
+<div class="alert alert-danger mt-3" style="max-width: 500px;">
+    <h5>Confirmer la suppression ?</h5>
+
+    <img src="@(Model.ImageUrl ?? $"https://picsum.photos/seed/product-{Model.Id}/200/150")"
+         class="rounded mb-3" style="max-width: 200px; object-fit: cover;" alt="@Model.Nom" />
+
+    <p>Vous allez supprimer le produit suivant :</p>
+    <ul>
+        <li><strong>Nom :</strong> @Model.Nom</li>
+        <li><strong>Categorie :</strong> @Model.Categorie</li>
+        <li><strong>Prix :</strong> @Model.Prix.ToString("C")</li>
+        <li><strong>Quantite :</strong> @Model.Quantite</li>
+    </ul>
+
+    <form asp-action="Delete" method="post">
+        <input type="hidden" asp-for="Id" />
+        <button type="submit" class="btn btn-danger">
+            <i class="bi bi-trash"></i> Oui, supprimer
+        </button>
+        <a asp-action="Index" class="btn btn-secondary ms-2">Annuler</a>
+    </form>
+</div>
