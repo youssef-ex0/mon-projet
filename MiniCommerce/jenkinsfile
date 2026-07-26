@@ -1,1 +1,69 @@
+pipeline {
+    agent any
 
+    environment {
+        DOTNET_CLI_TELEMETRY_OPTOUT = '1'
+        IMAGE_NAME = 'TON_USERNAME_DOCKERHUB/minicommerce'
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Restore') {
+            steps {
+                bat 'dotnet restore MiniCommerce.csproj'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                bat 'dotnet build MiniCommerce.csproj --configuration Release'
+            }
+        }
+
+        stage('Publish') {
+            steps {
+                bat 'dotnet publish MiniCommerce.csproj -c Release -o publish'
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                bat 'docker build -t %IMAGE_NAME%:latest .'
+            }
+        }
+
+        stage('Docker Login') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    bat 'echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin'
+                }
+            }
+        }
+
+        stage('Docker Push') {
+            steps {
+                bat 'docker push %IMAGE_NAME%:latest'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline exécuté avec succès.'
+        }
+
+        failure {
+            echo 'Le pipeline a échoué.'
+        }
+    }
+}
