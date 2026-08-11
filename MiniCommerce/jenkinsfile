@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOTNET_CLI_TELEMETRY_OPTOUT = '1'
-        IMAGE_NAME = 'TON_USERNAME_DOCKERHUB/minicommerce'
+        SONAR_TOKEN = credentials('sonar-jenkins')
     }
 
     stages {
@@ -22,7 +22,33 @@ pipeline {
 
         stage('Build') {
             steps {
-                bat 'dotnet build MiniCommerce.csproj --configuration Release'
+                bat 'dotnet build MiniCommerce.csproj --configuration Release --no-restore'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                bat 'dotnet test --configuration Release --no-build'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonar') {
+                    script {
+                        def scannerHome = tool 'sonar-scanner'
+
+                        bat """
+                        "${scannerHome}\\bin\\sonar-scanner.bat" ^
+                        -Dsonar.projectKey=MiniCommerce ^
+                        -Dsonar.projectName=MiniCommerce ^
+                        -Dsonar.sources=. ^
+                        -Dsonar.exclusions=**/bin/**,**/obj/**,**/publish/** ^
+                        -Dsonar.host.url=http://host.docker.internal:9000 ^
+                        -Dsonar.token=%SONAR_TOKEN%
+                        """
+                    }
+                }
             }
         }
 
@@ -34,7 +60,7 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                bat 'docker build -t %IMAGE_NAME%:latest .'
+                bat 'docker build -t %IMAGE_NAME% .'
             }
         }
 
@@ -45,38 +71,27 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    bat 'echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin'
+                    bat '''
+                    echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+                    '''
                 }
             }
         }
 
         stage('Docker Push') {
             steps {
-                bat 'docker push %IMAGE_NAME%:latest'
+                bat 'docker push %IMAGE_NAME%'
             }
         }
     }
 
     post {
         success {
-            echo 'Pipeline exécuté avec succès.'
+            echo 'Pipeline MiniCommerce exécuté avec succès.'
         }
 
         failure {
-            echo 'Le pipeline a échoué.'
+            echo 'Le pipeline MiniCommerce a échoué.'
         }
-withSonarQubeEnv('sonar') {
-    script {
-        def scannerHome = tool 'sonar-scanner'
-        bat """
-        ${scannerHome}\\bin\\sonar-scanner.bat ^
-        -Dsonar.projectKey=MiniCommerce ^
-        -Dsonar.projectName=MiniCommerce ^
-        -Dsonar.sources=. ^
-        -Dsonar.host.url=http://host.docker.internal:9000 ^
-        -Dsonar.login=%SONAR_TOKEN%
-        """
-    }
-}
     }
 }
