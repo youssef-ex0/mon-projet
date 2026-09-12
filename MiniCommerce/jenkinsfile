@@ -84,7 +84,26 @@ pipeline {
             }
         }
     }
+        stage('OWASP ZAP Security Scan') {
+            steps {
+                bat '''
+                   docker run --rm ^
+                    --network dev-net ^
+          -v "%WORKSPACE%:/zap/wrk/:rw" ^
+          zaproxy/zap-stable ^
+          zap-baseline.py ^
+          -t http://minicommerce:8080 ^
+          -r zap-report.html
+        '''
+    }
 
+    post {
+        always {
+            archiveArtifacts artifacts: 'zap-report.html',
+                              allowEmptyArchive: true
+        }
+    }
+}
     post {
         success {
             echo 'Pipeline MiniCommerce exécuté avec succès.'
